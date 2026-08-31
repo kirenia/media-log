@@ -1,29 +1,54 @@
-const BASE_URL = "https://cyberpunk-library-981d8d401a96.herokuapp.com/books";
+// must be a static process.env.X reference for expo to inline it
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  "https://cyberpunk-library-981d8d401a96.herokuapp.com";
 
-export async function getBooks() {
-  const res = await fetch(BASE_URL);
-  return res.json();
+async function request(path, { token, ...options } = {}) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(body.message || "Something went wrong");
+    error.status = res.status;
+    throw error;
+  }
+  return body;
 }
 
-export async function createBook(data) {
-  const res = await fetch(BASE_URL, {
+// auth
+export const signup = (email, password) =>
+  request("/auth/signup", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ email, password }),
   });
-  return res.json();
-}
 
-export async function updateBook(id, data) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+export const login = (email, password) =>
+  request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+
+export const getMe = (token) => request("/auth/me", { token });
+
+// books -- all of these need a token now
+export const getBooks = (token) => request("/books", { token });
+
+export const createBook = (data, token) =>
+  request("/books", { method: "POST", token, body: JSON.stringify(data) });
+
+export const updateBook = (id, data, token) =>
+  request(`/books/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    token,
     body: JSON.stringify(data),
   });
-  return res.json();
-}
 
-export async function deleteBook(id) {
-  const res = await fetch(`${BASE_URL}/${id}`, { method: "DELETE" });
-  return res.json();
-}
+export const deleteBook = (id, token) =>
+  request(`/books/${id}`, { method: "DELETE", token });

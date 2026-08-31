@@ -9,9 +9,12 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { getBooks, updateBook, deleteBook } from "../api";
+import { useAuth } from "../AuthContext";
 
 export default function Library({ navigation }) {
+  const { user, token, signOut } = useAuth();
   const [books, setBooks] = useState([]);
+  const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [editForm, setEditForm] = useState({
     title: "",
@@ -20,8 +23,10 @@ export default function Library({ navigation }) {
   });
 
   const loadBooks = useCallback(() => {
-    getBooks().then(setBooks);
-  }, []);
+    getBooks(token)
+      .then(setBooks)
+      .catch((err) => setError(err.message));
+  }, [token]);
 
   useFocusEffect(loadBooks);
 
@@ -35,20 +40,31 @@ export default function Library({ navigation }) {
   }
 
   async function handleUpdate() {
-    const updated = await updateBook(selectedId, editForm);
+    const updated = await updateBook(selectedId, editForm, token);
     setBooks(books.map((b) => (b._id === selectedId ? updated : b)));
     setSelectedId(null);
   }
 
   async function handleDelete(id) {
-    await deleteBook(id);
+    await deleteBook(id, token);
     setBooks(books.filter((b) => b._id !== id));
     if (selectedId === id) setSelectedId(null);
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Media Log</Text>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Media Log</Text>
+          <Text style={styles.who}>{user?.email}</Text>
+        </View>
+        <TouchableOpacity onPress={signOut}>
+          <Text style={styles.signOutText}>Log Out</Text>
+        </TouchableOpacity>
+      </View>
+
+      {error && <Text style={styles.error}>{error}</Text>}
+
       <TouchableOpacity
         style={styles.logButton}
         onPress={() => navigation.navigate("Log")}>
@@ -115,10 +131,20 @@ export default function Library({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#282a36", padding: 20 },
-  title: {
-    fontSize: 28,
-    color: "#ff79c6",
-    fontWeight: "bold",
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  title: { fontSize: 28, color: "#ff79c6", fontWeight: "bold" },
+  who: { color: "#6272a4", fontSize: 12 },
+  signOutText: { color: "#ff5555" },
+  error: {
+    color: "#ff5555",
+    backgroundColor: "#44475a",
+    padding: 10,
+    borderRadius: 6,
     marginBottom: 12,
   },
   logButton: {

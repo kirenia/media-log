@@ -7,18 +7,27 @@ import {
   StyleSheet,
 } from "react-native";
 import { createBook } from "../api";
+import { useAuth } from "../AuthContext";
 
 export default function Log({ navigation }) {
+  const { token } = useAuth();
   const [form, setForm] = useState({ title: "", author: "", mediaType: "" });
+  const [error, setError] = useState(null);
 
   async function handleSubmit() {
-    await createBook(form);
-    navigation.goBack();
+    setError(null);
+    try {
+      await createBook(form, token);
+      navigation.goBack();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log Media</Text>
+      {error && <Text style={styles.error}>{error}</Text>}
       <TextInput
         style={styles.input}
         placeholder="Title"
@@ -69,4 +78,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: { color: "#282a36", fontWeight: "bold" },
+  error: {
+    color: "#ff5555",
+    backgroundColor: "#44475a",
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
 });
